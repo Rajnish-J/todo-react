@@ -1,4 +1,3 @@
-// src/components/Calendar.tsx
 import React from 'react';
 
 interface CalendarProps {
@@ -12,14 +11,15 @@ const Calendar: React.FC<CalendarProps> = ({ currentDate, onDateChange }) => {
   const year = currentDate.getFullYear();
   const day = currentDate.getDate();
   
+  // Calculate first day of month
+  const firstDayOfMonth = new Date(year, currentDate.getMonth(), 1).getDay();
+  // Adjust for Monday as first day (0 = Sunday, 1 = Monday, etc.)
+  const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+  
   // Generate calendar grid
   const generateCalendarDays = () => {
     const daysInMonth = new Date(year, currentDate.getMonth() + 1, 0).getDate();
-    const firstDayOfMonth = new Date(year, currentDate.getMonth(), 1).getDay();
     const days = [];
-    
-    // Adjust for Monday as first day (0 = Sunday, 1 = Monday, etc.)
-    const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
     
     // Add empty slots for days before the 1st of the month
     for (let i = 0; i < startOffset; i++) {

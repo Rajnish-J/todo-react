@@ -1,117 +1,117 @@
-// src/pages/Dashboard.tsx
 import React, { useState } from 'react';
-import Header from '../components/Header';
+import { Link } from 'react-router-dom';
 import Calendar from '../components/Calendar';
-import TaskCard from '../components/TaskCard';
-import TaskCounter from '../components/TaskCounter';
 import FilterBar from '../components/FilterBar';
-import TaskForm from '../components/TaskForm';
-import Footer from '../components/Footer';
+import TaskCounter from '../components/TaskCounter';
+import TaskCard from '../components/TaskCard';
 import { useTaskContext } from '../context/TaskContext';
 
 const Dashboard: React.FC = () => {
   const { 
     tasks, 
     loading, 
+    error, 
     completedTasks, 
     pendingTasks,
-    addNewTask,
     updateTaskStatus,
-    editTask,
     removeTask
   } = useTaskContext();
-  
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<string | null>(null);
-  const [filteredTasks, setFilteredTasks] = useState(tasks);
-  
-  // Handle calendar date change
-  const handleDateChange = (date: Date) => {
-    setSelectedDate(date);
-  };
-  
-  // Handle task status toggle
-  const handleStatusChange = (id: string, completed: boolean) => {
-    updateTaskStatus(id, completed);
-  };
-  
-  // Handle task edit
-  const handleEdit = (id: string) => {
-    setEditingTask(id);
-    setShowAddForm(true);
-  };
-  
-  // Handle task delete
-  const handleDelete = (id: string) => {
-    removeTask(id);
-  };
-  
-  // Handle form submit
-  const handleTaskSubmit = async (taskData: any) => {
-    if (editingTask) {
-      await editTask(editingTask, taskData);
-      setEditingTask(null);
-    } else {
-      await addNewTask(taskData);
+
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<number | null>(null);
+
+  // Filter tasks
+  const filteredTasks = tasks.filter(task => {
+    // Search filter
+    if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
     }
-    setShowAddForm(false);
-  };
-  
-  // Handle category filtering
-  const handleCategoryFilter = (category: string) => {
-    if (category) {
-      setFilteredTasks(tasks.filter(task => task.category === category));
-    } else {
-      setFilteredTasks(tasks);
+    
+    // Priority filter
+    if (priorityFilter !== null && task.priority !== priorityFilter) {
+      return false;
     }
-  };
-  
-  // Handle priority filtering
-  const handlePriorityFilter = (priority: number) => {
-    if (priority) {
-      setFilteredTasks(tasks.filter(task => task.priority === priority));
-    } else {
-      setFilteredTasks(tasks);
+    
+    // Date filter - show tasks that match the selected date
+    const taskDate = new Date(task.startDate);
+    if (
+      taskDate.getDate() !== currentDate.getDate() ||
+      taskDate.getMonth() !== currentDate.getMonth() ||
+      taskDate.getFullYear() !== currentDate.getFullYear()
+    ) {
+      return false;
     }
-  };
-  
-  // Handle search
-  const handleSearch = (query: string) => {
-    if (query) {
-      setFilteredTasks(tasks.filter(task => 
-        task.title.toLowerCase().includes(query.toLowerCase()) ||
-        task.description.toLowerCase().includes(query.toLowerCase())
-      ));
-    } else {
-      setFilteredTasks(tasks);
-    }
-  };
-  
+    
+    return true;
+  });
+
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <div className="text-center py-8">Loading tasks...</div>;
   }
-  
+
+  if (error) {
+    return <div className="text-center py-8 text-red-500">{error}</div>;
+  }
+
   return (
-    <div className="max-w-6xl mx-auto bg-gray-100 min-h-screen flex flex-col">
-      <Header username="Aqeel" />
-      
-      <div className="flex-1 p-4">
-        <div className="flex items-center">
-          <h1 className="text-2xl font-bold">Hello, Aqeel, <span className="text-gray-500">Start planning today</span></h1>
+    <div>
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="md:w-1/3">
+          <Calendar 
+            currentDate={currentDate} 
+            onDateChange={setCurrentDate} 
+          />
+          
+          <div className="mt-6">
+            <Link 
+              to="/task" 
+              className="block w-full py-3 text-center bg-red-400 text-white font-bold rounded-lg hover:bg-red-500 transition-colors"
+            >
+              + Add New Task
+            </Link>
+          </div>
         </div>
         
-        <div className="mt-6 grid grid-cols-4 gap-6">
-          {/* Left column: Calendar and stats */}
-          <div className="col-span-1">
-            <Calendar currentDate={selectedDate} onDateChange={handleDateChange} />
-            
-            <TaskCounter 
-              completedCount={completedTasks.length} 
-              pendingCount={pendingTasks.length} 
-            />
-            
-            <div className="bg-white p-3 rounded-lg mt-4">
-              <div className="flex justify-between items-center">
-                <h3 className="font-medium">Tasks created</h3>
-                <span className="text-lg font-bold">1,500</span>
+        <div className="md:w-2/3">
+          <FilterBar 
+            onCategoryFilter={setCategoryFilter}
+            onPriorityFilter={setPriorityFilter}
+            onSearch={setSearchQuery}
+          />
+          
+          <TaskCounter 
+            completedCount={completedTasks.length} 
+            pendingCount={pendingTasks.length} 
+          />
+          
+          <h2 className="font-bold text-lg mt-6 mb-3">Today's Tasks</h2>
+          
+          {filteredTasks.length === 0 ? (
+            <div className="text-center py-8 bg-amber-50 rounded-lg">
+              <p>No tasks for this day.</p>
+              <Link to="/task" className="text-red-400 font-medium mt-2 inline-block">
+                + Add New Task
+              </Link>
+            </div>
+          ) : (
+            <div>
+              {filteredTasks.map(task => (
+                <TaskCard 
+                  key={task.id}
+                  task={task}
+                  onStatusChange={updateTaskStatus}
+                  onEdit={(id) => window.location.href = `/task/${id}`}
+                  onDelete={removeTask}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
